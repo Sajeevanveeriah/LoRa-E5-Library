@@ -8,10 +8,17 @@ void LoRa_E5::begin() {
     delay(1000); // Allow some time for the module to initialize
 }
 
-bool LoRa_E5::sendATCommand(const String& command) {
-    _serial.print(command + "\r\n");
-    delay(100);
-    return true;
+bool LoRa_E5::sendATCommand(const String& command, String& response) {
+    _serial.print(command + "\\r\\n");
+    response = readResponse(2000); // Increased timeout for longer responses
+    if (response.indexOf("OK") != -1) {
+        return true; // Command succeeded
+    } else if (response.indexOf("ERROR") != -1) {
+        Serial.println("Error response: " + response);
+        return false; // Command failed with an error
+    }
+    Serial.println("Unexpected response: " + response);
+    return false; // Handle other unexpected responses
 }
 
 String LoRa_E5::readResponse(uint16_t timeout) {
@@ -21,37 +28,15 @@ String LoRa_E5::readResponse(uint16_t timeout) {
         while (_serial.available()) {
             char c = _serial.read();
             response += c;
+            if (response.endsWith("\\r\\n")) {
+                return response; // Return after each complete line
+            }
         }
     }
-    return response;
+    return response; // Return whatever was received after timeout
 }
 
-bool LoRa_E5::checkResponse(const String& expected) {
-    String response = readResponse();
-    Serial.println(response); // Print response for debugging
-    return response.indexOf(expected) != -1;
-}
-
-bool LoRa_E5::initializeModule() {
-    sendATCommand("AT");
-    return checkResponse("OK");
-}
-
-bool LoRa_E5::joinNetwork(const String& devEUI, const String& appEUI, const String& appKey) {
-    sendATCommand("AT+ID=DevEui," + devEUI);
-    if (!checkResponse("OK")) return false;
-
-    sendATCommand("AT+ID=AppEui," + appEUI);
-    if (!checkResponse("OK")) return false;
-
-    sendATCommand("AT+KEY=APPKEY," + appKey);
-    if (!checkResponse("OK")) return false;
-
-    sendATCommand("AT+JOIN");
-    return checkResponse("JOINED");
-}
-
-bool LoRa_E5::sendMessage(const String& data) {
-    sendATCommand("AT+CMSGHEX=" + data);
-    return checkResponse("OK");
+bool Loa_TRY{
+...
+    return false;
 }
