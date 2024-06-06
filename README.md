@@ -20,7 +20,7 @@ This library provides a simple interface to communicate with the LoRa-E5 module 
 
 1. Clone this repository into your Arduino libraries folder.
 
-```bash
+
 cd ~/Documents/Arduino/libraries
 git clone https://github.com/yourusername/LoRa_E5_Library.git
 Restart the Arduino IDE if it was open.
@@ -28,8 +28,7 @@ Usage
 Example
 Here is an example sketch demonstrating how to use the library.
 
-cpp
-Copy code
+
 #include <LoRa_E5.h>
 
 // Define the serial interface for LoRa-E5
@@ -92,7 +91,9 @@ Contributing
 Contributions are welcome! Please fork this repository and submit pull requests.
 
 License
-This project is licensed under the MIT License.
+
+This project is licensed under the Unlicensed License.
+
 
 Contact
 If you have any questions or feedback, feel free to reach out.
