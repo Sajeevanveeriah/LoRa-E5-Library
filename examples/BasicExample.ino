@@ -1,50 +1,54 @@
 #include <LoRa_E5.h>
 
-// Setup the serial communication parameters
-HardwareSerial mySerial(1); // Use UART1
-int rxPin = 16; // Example RX Pin
-int txPin = 17; // Example TX Pin
+#define LORA_SERIAL Serial1
+#define BAUD_RATE 9600
+#define RX_PIN 16
+#define TX_PIN 17
 
-// Create an instance of the LoRa_E5 class
-LoRa_E5 loraModule(mySerial, 9600, rxPin, txPin);
+LoRa_E5 lora(LORA_SERIAL, BAUD_RATE, RX_PIN, TX_PIN);
 
 void setup() {
-  // Begin Serial Communication
-  Serial.begin(115200);
-  while (!Serial) continue; // Wait for Serial to be ready
+    Serial.begin(115200);
+    
+    if (!lora.begin()) {
+        Serial.println("Failed to initialize LoRa-E5 module");
+        while (1);
+    }
 
-  // Begin communication with the LoRa module
-  loraModule.begin();
+    if (!lora.initializeModule()) {
+        Serial.println("Failed to reset LoRa-E5 module");
+        while (1);
+    }
 
-  // Initialize the LoRa-E5 module
-  String response;
-  if (!loraModule.sendATCommand("AT", response)) {
-    Serial.println("Failed to initialize the LoRa-E5 module.");
-    Serial.println("Response: " + response);
-  } else {
-    Serial.println("LoRa-E5 module initialized successfully.");
-  }
+    String devEUI = "0000000000000000"; // Replace with your DevEUI
+    String appEUI = "0000000000000000"; // Replace with your AppEUI
+    String appKey = "00000000000000000000000000000000"; // Replace with your AppKey
 
-  // Join the network using OTAA
-  String devEUI = "your_dev_eui";
-  String appEUI = "your_app_eui";
-  String appKey = "your_app_key";
-  if (!loraModule.joinNetwork(devEUI, appEUI, appKey)) {
-    Serial.println("Failed to join the network.");
-  } else {
-    Serial.println("Joined the network successfully.");
-  }
+    if (!lora.joinNetwork(devEUI, appEUI, appKey)) {
+        Serial.println("Failed to join network");
+        while (1);
+    }
+
+    Serial.println("Successfully joined network");
 }
 
 void loop() {
-  // Send a LoRa message periodically
-  String data = "Hello, LoRa!";
-  if (!loraImodule.sendMessage(data)) {
-    Serial.println("Failed to send the message.");
-  } else {
-    Serial.println("Message sent successfully.");
-  }
+    String data = "48656C6C6F576F726C64"; // "HelloWorld" in HEX format
+    if (lora.sendMessage(data)) {
+        Serial.println("Message sent successfully");
+    } else {
+        Serial.println("Failed to send message");
+    }
 
-  // Wait for 10 seconds before sending the next message
-  delay(10000);
+    // Example of using new methods
+    Serial.print("Battery voltage: ");
+    Serial.println(lora.getBatteryVoltage());
+    
+    Serial.print("RSSI: ");
+    Serial.println(lora.getRSSI());
+
+    Serial.print("SNR: ");
+    Serial.println(lora.getSNR());
+
+    delay(60000); // Wait for 1 minute before sending the next message
 }
