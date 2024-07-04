@@ -17,7 +17,7 @@ This library provides a simple interface to communicate with the LoRa-E5 module 
 1. Clone this repository into your Arduino libraries folder:
    ```
    cd ~/Documents/Arduino/libraries
-   git clone https://github.com/yourusername/LoRa_E5_Library.git
+   git clone https://github.com/Sajeevanveeriah/LoRa_E5_Library.git
    ```
 2. Restart the Arduino IDE if it was open.
 
