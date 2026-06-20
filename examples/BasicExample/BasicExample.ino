@@ -9,21 +9,20 @@ LoRa_E5 lora(LORA_SERIAL, BAUD_RATE, RX_PIN, TX_PIN);
 
 void setup() {
     Serial.begin(115200);
-    
+
     if (!lora.begin()) {
-        Serial.println("Failed to initialize LoRa-E5 module");
+        Serial.println("Failed to initialise LoRa-E5 module");
         while (1);
     }
 
-    if (!lora.initializeModule()) {
-        Serial.println("Failed to reset LoRa-E5 module");
-        while (1);
-    }
+    Serial.print("Firmware version: ");
+    Serial.println(lora.getDeviceStatus());
 
     String devEUI = "0000000000000000"; // Replace with your DevEUI
     String appEUI = "0000000000000000"; // Replace with your AppEUI
     String appKey = "00000000000000000000000000000000"; // Replace with your AppKey
 
+    // joinNetwork sets AT+MODE=LWOTAA before sending the credentials.
     if (!lora.joinNetwork(devEUI, appEUI, appKey)) {
         Serial.println("Failed to join network");
         while (1);
@@ -33,22 +32,19 @@ void setup() {
 }
 
 void loop() {
-    String data = "48656C6C6F576F726C64"; // "HelloWorld" in HEX format
+    String data = "48656C6C6F576F726C64"; // "HelloWorld" in hex
     if (lora.sendMessage(data)) {
         Serial.println("Message sent successfully");
+
+        // RSSI and SNR come from the most recent uplink response.
+        Serial.print("RSSI: ");
+        Serial.println(lora.getRSSI());
+
+        Serial.print("SNR: ");
+        Serial.println(lora.getSNR());
     } else {
         Serial.println("Failed to send message");
     }
-
-    // Example of using new methods
-    Serial.print("Battery voltage: ");
-    Serial.println(lora.getBatteryVoltage());
-    
-    Serial.print("RSSI: ");
-    Serial.println(lora.getRSSI());
-
-    Serial.print("SNR: ");
-    Serial.println(lora.getSNR());
 
     delay(60000); // Wait for 1 minute before sending the next message
 }

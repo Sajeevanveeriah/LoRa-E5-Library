@@ -1,0 +1,23 @@
+#######################################
+# Syntax colouring map for LoRa_E5
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+LoRa_E5	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+initializeModule	KEYWORD2
+joinNetwork	KEYWORD2
+sendMessage	KEYWORD2
+setDataRate	KEYWORD2
+setTxPower	KEYWORD2
+getDeviceStatus	KEYWORD2
+getRSSI	KEYWORD2
+getSNR	KEYWORD2

@@ -16,7 +16,6 @@ public:
     bool setDataRate(uint8_t dataRate);
     bool setTxPower(uint8_t txPower);
     String getDeviceStatus();
-    float getBatteryVoltage();
     int16_t getRSSI();
     int8_t getSNR();
 
@@ -26,9 +25,17 @@ private:
     int8_t _rxPin;
     int8_t _txPin;
 
+    // Most recent matched response line, plus the RSSI/SNR parsed from the
+    // last uplink response (this module reports them inline, not via a query).
+    String _lastResponse;
+    int16_t _lastRSSI;
+    int8_t _lastSNR;
+
     bool sendATCommand(const String &command, const String &expectedResponse, unsigned long timeout = 1000);
     String readResponse(unsigned long timeout = 1000);
     void flushSerial();
+    String formatHexPayload(const String &data);
+    void captureSignalMetrics(const String &response);
 };
 
 #endif // LORA_E5_H
