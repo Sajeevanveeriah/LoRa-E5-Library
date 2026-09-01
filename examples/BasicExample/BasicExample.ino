@@ -1,5 +1,8 @@
 #include <LoRa_E5.h>
 
+// This sketch demonstrates the library's ownership boundary: the sketch selects
+// the ESP32 HardwareSerial port and pins, while LoRa_E5::begin() configures that
+// port and verifies the external LoRa-E5 module responds to AT commands.
 #define LORA_SERIAL Serial1
 #define BAUD_RATE 9600
 #define RX_PIN 16
@@ -18,11 +21,14 @@ void setup() {
     Serial.print("Firmware version: ");
     Serial.println(lora.getDeviceStatus());
 
-    String devEUI = "0000000000000000"; // Replace with your DevEUI
-    String appEUI = "0000000000000000"; // Replace with your AppEUI
-    String appKey = "00000000000000000000000000000000"; // Replace with your AppKey
+    // These placeholders must be replaced with OTAA credentials issued by the
+    // LoRaWAN network. Keep real AppKeys out of source control.
+    String devEUI = "0000000000000000";
+    String appEUI = "0000000000000000";
+    String appKey = "00000000000000000000000000000000";
 
-    // joinNetwork sets AT+MODE=LWOTAA before sending the credentials.
+    // joinNetwork selects LWOTAA mode, configures credentials and then waits for
+    // the module's asynchronous +JOIN result rather than a simple OK response.
     if (!lora.joinNetwork(devEUI, appEUI, appKey)) {
         Serial.println("Failed to join network");
         while (1);
@@ -32,11 +38,14 @@ void setup() {
 }
 
 void loop() {
-    String data = "48656C6C6F576F726C64"; // "HelloWorld" in hex
+    // sendMessage accepts hexadecimal payload bytes. "HelloWorld" is encoded
+    // here only to make the example easy to recognise at the network server.
+    String data = "48656C6C6F576F726C64";
     if (lora.sendMessage(data)) {
         Serial.println("Message sent successfully");
 
-        // RSSI and SNR come from the most recent uplink response.
+        // RSSI and SNR are cached from the most recent uplink response that
+        // contained those fields; they are not independent live radio queries.
         Serial.print("RSSI: ");
         Serial.println(lora.getRSSI());
 
@@ -46,5 +55,7 @@ void loop() {
         Serial.println("Failed to send message");
     }
 
-    delay(60000); // Wait for 1 minute before sending the next message
+    // The interval is an application choice, not a library requirement. Real
+    // deployments must respect the applicable LoRaWAN regional/duty-cycle rules.
+    delay(60000);
 }
