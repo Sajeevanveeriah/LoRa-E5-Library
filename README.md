@@ -1,34 +1,39 @@
 # LoRa-E5 Library for ESP32
 
-## Overview
-This library provides a simple interface to communicate with a Seeed LoRa-E5
-(Wio-E5) module from an ESP32 over a HardwareSerial UART. It lets you initialise
-the module, join a LoRaWAN network using OTAA, and send hex uplinks using the
-module's AT command set.
+Arduino/ESP32 wrapper for communicating with a Seeed LoRa-E5 (Wio-E5) module over `HardwareSerial`. The ESP32 sends the module's AT commands; the LoRa-E5 itself owns the LoRaWAN protocol stack.
 
-## Features
-* Initialise the LoRa-E5 module
-* Join a LoRaWAN network (OTAA)
-* Send hex messages over LoRaWAN (confirmed or unconfirmed)
-* Read the firmware version, and the RSSI/SNR reported by the last uplink
+## Scope
 
-## Hardware Requirements
-* ESP32
-* Seeed LoRa-E5 / Wio-E5 module
-* UART connection between the ESP32 and the LoRa-E5 module (9600 8N1)
+The library can:
+
+- initialise and probe the module;
+- reset it through `AT+RESET`;
+- configure OTAA credentials and join a LoRaWAN network;
+- send confirmed or unconfirmed hexadecimal uplinks;
+- set data rate and transmit power;
+- read the firmware/version response;
+- retain RSSI and SNR values reported inline by the most recent relevant uplink response.
+
+It does not provision a LoRaWAN network server, securely store OTAA keys or implement the LoRaWAN MAC on the ESP32.
+
+## Hardware
+
+- ESP32
+- Seeed LoRa-E5 / Wio-E5
+- UART connection between the devices
+- Common ground
+- Default module UART setting: 9600 baud, 8N1
 
 ## Installation
-1. Clone this repository into your Arduino libraries folder:
-   ```
-   cd ~/Documents/Arduino/libraries
-   git clone https://github.com/Sajeevanveeriah/LoRa-E5-Library.git
-   ```
-2. Restart the Arduino IDE if it was open.
 
-## Usage Example
-The constructor takes the serial port, baud rate and (for ESP32) the RX and TX
-pins, so the library opens the port for you in `begin()`. Do not call
-`Serial1.begin()` yourself as well.
+Clone or copy this repository into the Arduino libraries directory, then restart the Arduino IDE if required.
+
+```bash
+cd ~/Documents/Arduino/libraries
+git clone https://github.com/Sajeevanveeriah/LoRa-E5-Library.git
+```
+
+## Basic use
 
 ```cpp
 #include <LoRa_E5.h>
@@ -44,102 +49,86 @@ void setup() {
     Serial.begin(115200);
 
     if (!lora.begin()) {
-        Serial.println("Failed to initialise LoRa-E5 module");
         while (1);
     }
 
-    String devEUI = "0000000000000000"; // Replace with your DevEUI
-    String appEUI = "0000000000000000"; // Replace with your AppEUI
-    String appKey = "00000000000000000000000000000000"; // Replace with your AppKey
+    String devEUI = "0000000000000000";
+    String appEUI = "0000000000000000";
+    String appKey = "00000000000000000000000000000000";
 
     if (!lora.joinNetwork(devEUI, appEUI, appKey)) {
-        Serial.println("Failed to join network");
         while (1);
     }
-
-    Serial.println("Successfully joined network");
 }
 
 void loop() {
-    String data = "48656C6C6F576F726C64"; // "HelloWorld" in hex
-    lora.sendMessage(data);
-    delay(60000); // Wait for 1 minute before sending the next message
+    lora.sendMessage("48656C6C6F");
+    delay(60000);
 }
 ```
 
-A complete sketch is in `examples/BasicExample/BasicExample.ino`.
+Use network-issued OTAA credentials in a real deployment and keep secret keys out of source control. A fuller sketch is provided in `examples/BasicExample/BasicExample.ino`.
 
-### Payload format
-`sendMessage()` takes the payload as a hex string. It must contain an even
-number of hex digits. Contiguous hex (for example `48656C6C6F`) and
-space-separated hex (`48 65 6C 6C 6F`) are both accepted; the library reformats
-the payload into the space-separated form the module expects before sending. Any
-other input is rejected and `sendMessage()` returns `false`.
+## Payload format
 
-## API
+`sendMessage()` accepts hexadecimal bytes. Contiguous hex such as `48656C6C6F` and space-separated hex such as `48 65 6C 6C 6F` are accepted. Input must resolve to an even number of hexadecimal digits. Invalid input returns `false` before an uplink command is issued.
+
+## API behaviour
 
 ### `LoRa_E5(HardwareSerial &serial, uint32_t baud, int8_t rxPin = -1, int8_t txPin = -1)`
-Constructor.
-- `serial`: the HardwareSerial instance (for example `Serial1`).
-- `baud`: the baud rate (the LoRa-E5 default is 9600).
-- `rxPin`, `txPin`: the ESP32 UART pins. If left at -1 the default pins for that
-  port are used.
+
+Stores the serial interface and UART settings. `begin()` configures the supplied `HardwareSerial`, so do not independently initialise the same port with conflicting settings.
 
 ### `bool begin(unsigned long timeout = 1000)`
-Opens the serial port and waits for the module to answer `AT` with `OK`. Returns
-`true` once the module responds.
+
+Opens the UART and repeatedly probes the module with `AT` until `OK` is observed or the timeout expires.
 
 ### `bool initializeModule()`
-Sends `AT+RESET` to the module.
 
-### `bool joinNetwork(const String &devEUI, const String &appEUI, const String &appKey, unsigned long timeout = 30000)`
-Sets OTAA mode (`AT+MODE=LWOTAA`), sets the quoted credentials, sends `AT+JOIN`,
-then waits up to `timeout` for `+JOIN: Network joined`. Returns `true` on a
-successful join, `false` on `+JOIN: Join failed` or timeout.
+Sends `AT+RESET` and expects `OK`.
+
+### `bool joinNetwork(...)`
+
+Selects OTAA mode, writes DevEUI/AppEUI/AppKey and sends `AT+JOIN`. Join completion is asynchronous: the implementation waits for `+JOIN: Network joined`, `+JOIN: Join failed` or timeout.
 
 ### `bool sendMessage(const String &data, uint8_t port = 1, bool confirmed = false)`
-Sends `data` (a hex string, see Payload format) as an uplink. When `confirmed`
-is `true` it uses `AT+CMSGHEX`, otherwise `AT+MSGHEX`. When `port` is not 1 it
-sets the port with `AT+PORT` first. Returns `true` when the module reports
-`Done`.
 
-### `bool setDataRate(uint8_t dataRate)`
-Sets the data rate, for example `setDataRate(3)` sends `AT+DR=DR3`.
+Validates and formats the payload, optionally changes the port, then uses `AT+MSGHEX` or `AT+CMSGHEX`. The method waits for the module's completion/failure output and captures RSSI/SNR when present.
 
-### `bool setTxPower(uint8_t txPower)`
-Sets the transmit power with `AT+POWER`.
+### `setDataRate()` and `setTxPower()`
 
-### `String getDeviceStatus()`
-Returns the firmware version string reported by `AT+VER`.
+Pass the requested values to the module's AT interface. The library does not decide whether a value is appropriate for the deployment's LoRaWAN region or network policy.
 
-### `int16_t getRSSI()`
-Returns the RSSI parsed from the most recent uplink response. It is only
-meaningful after a `sendMessage()` whose response carried an RSSI value
-(typically a confirmed uplink, or any uplink with a downlink).
+### `getDeviceStatus()`
 
-### `int8_t getSNR()`
-Returns the SNR parsed from the most recent uplink response, with the same
-caveat as `getRSSI()`.
+Returns the `AT+VER` response, despite the historical method name `getDeviceStatus()`.
 
-## Hardware Smoke Test
-This library is verified to compile offline for ESP32. The steps below need real
-hardware and a LoRaWAN network server, so run them yourself:
+### `getRSSI()` and `getSNR()`
 
-1. Wire the ESP32 UART2 to the LoRa-E5 RX/TX, with a common ground, at 9600 8N1.
-2. Confirm `AT` returns `OK`, and `AT+VER` returns a version (note it down, as
-   some behaviour is firmware dependent).
-3. Run `joinNetwork()` with your real OTAA keys and confirm it reaches
-   `+JOIN: Network joined`.
-4. Run `sendMessage()` with a known hex string, confirm it returns `Done`, and
-   confirm the uplink appears on your network server.
+Return cached metrics parsed from the most recent uplink response containing them. They are not live measurement queries and may remain at a previous value when a later response omits those fields.
 
-## Contributing
-Contributions are welcome. Please fork this repository and submit pull requests.
+## Repository map
 
-## License
-This project is licensed under the Unlicense.
+See [`CODE-MAP.md`](CODE-MAP.md) before changing the library. In particular, the public header, AT parser, Arduino metadata and example sketch have different compatibility responsibilities.
 
-## Contact
-If you have any questions or feedback, feel free to reach out.
+## Verification
 
-GitHub: https://github.com/Sajeevanveeriah
+For changes to commands or parsing, use both software and hardware checks where available:
+
+1. compile the library and `BasicExample` for the intended ESP32 core;
+2. confirm `AT` returns `OK` on real hardware;
+3. record `AT+VER` output because behaviour can vary with module firmware;
+4. join with valid OTAA credentials;
+5. transmit a known payload and confirm it arrives at the network server;
+6. verify confirmed/unconfirmed paths and non-default ports if they were touched;
+7. validate RSSI/SNR parsing against the actual response format.
+
+A documentation-only change does not constitute a hardware validation.
+
+## Maintenance rules
+
+Comments should explain AT response semantics, timing, UART ownership, payload validation and radio/network assumptions. Avoid comments that merely repeat the C++ syntax.
+
+## Licence
+
+See `LICENSE` for the repository licence.
