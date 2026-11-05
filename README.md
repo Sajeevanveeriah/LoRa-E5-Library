@@ -132,3 +132,7 @@ Comments should explain AT response semantics, timing, UART ownership, payload v
 ## Licence
 
 See `LICENSE` for the repository licence.
+
+## Project handoff
+
+Read the [project handoff](HANDOFF.md) for current work, checks and the next step.
